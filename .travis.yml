@@ -1,0 +1,15 @@
+dist: trusty
+sudo: required
+language: go
+
+go:
+  - "1.14"
+
+env:
+  - GOMAXPROCS=4
+
+branches:
+  only:
+    - master
+
+script: make test
