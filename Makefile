@@ -60,6 +60,15 @@ define make-xc-target
 endef
 $(foreach goarch,$(XC_ARCH),$(foreach goos,$(XC_OS),$(eval $(call make-xc-target,$(goos),$(goarch)))))
 
+localserver:
+	@docker run --rm --interactive \
+		--volume="${CURRENT_DIR}:/go/src/${PROJECT}" \
+		--workdir="/go/src/${PROJECT}/internal/testing" \
+		"golang:${GOVERSION}" \
+		env CGO_ENABLED="0" GOOS="${GOOS}" GOARCH="${GOARCH}" \
+			go build -a -o="pkg/localserver"
+.PHONY: localserver
+
 dist:
 ifndef GPG_KEY
 	@echo "==> ERROR: No GPG key specified! Without a GPG key, this release cannot"
