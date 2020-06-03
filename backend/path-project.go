@@ -11,18 +11,20 @@ import (
 const KeyProjectConfigPrefix = "projects/"
 
 type SentryProject struct {
-	Name        string `json:"name"`
-	DisplayName string `json:"display_name"`
-	Team        string `json:"team"`
-	Org         string `json:"org"`
+	Name            string `json:"name"`
+	DisplayName     string `json:"display_name"`
+	Team            string `json:"team"`
+	Org             string `json:"org"`
+	DefaultDsnLabel string `json:"default_dsn_label"`
 }
 
 func (p *SentryProject) Data() map[string]interface{} {
 	return map[string]interface{}{
-		"name":         p.Name,
-		"display_name": p.DisplayName,
-		"team":         p.Team,
-		"org":          p.Org,
+		"name":              p.Name,
+		"display_name":      p.DisplayName,
+		"team":              p.Team,
+		"org":               p.Org,
+		"default_dsn_label": p.DefaultDsnLabel,
 	}
 }
 
@@ -73,6 +75,7 @@ func handleProjectsList(ctx context.Context, req *logical.Request, data *framewo
 func handleProjectUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	projectName := data.Get("project").(string)
 	teamName := data.Get("team").(string)
+	defaultDsnLabel := data.Get("default_dsn_label").(string)
 
 	config, err := loadConfig(ctx, req.Storage)
 	if err != nil {
@@ -117,10 +120,11 @@ func handleProjectUpdate(ctx context.Context, req *logical.Request, data *framew
 	}
 
 	item := &SentryProject{
-		Name:        projectName,
-		DisplayName: p.Name,
-		Org:         config.Name,
-		Team:        teamName,
+		Name:            projectName,
+		DisplayName:     p.Name,
+		Org:             config.Name,
+		Team:            teamName,
+		DefaultDsnLabel: defaultDsnLabel,
 	}
 
 	entry, err := logical.StorageEntryJSON(KeyProjectConfigPrefix+projectName, item)

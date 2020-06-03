@@ -93,6 +93,11 @@ func New(c *logical.BackendConfig) *backend {
 						Required:    true,
 						Description: "Name of the team that owns the project",
 					},
+					"default_dsn_label": {
+						Type:        framework.TypeString,
+						Required:    false,
+						Description: "DSN label to use by default when not specified",
+					},
 				},
 				Operations: map[logical.Operation]framework.OperationHandler{
 					logical.ReadOperation: &framework.PathOperation{
@@ -104,7 +109,7 @@ func New(c *logical.BackendConfig) *backend {
 				},
 			},
 			{
-				Pattern: "dsn/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("name"),
+				Pattern: "dsn/" + framework.GenericNameRegex("project") + framework.OptionalParamRegex("name"),
 				Fields: map[string]*framework.FieldSchema{
 					"project": {
 						Type:        framework.TypeString,
@@ -113,7 +118,7 @@ func New(c *logical.BackendConfig) *backend {
 					},
 					"name": {
 						Type:        framework.TypeString,
-						Required:    true,
+						Required:    false,
 						Description: "Name of the DSN",
 					},
 				},

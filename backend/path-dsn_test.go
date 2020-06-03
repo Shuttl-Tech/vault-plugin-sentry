@@ -20,8 +20,11 @@ func TestHandleDsnRead(t *testing.T) {
 			testReadDsnErr(project, dsnname, ""),
 			testWriteConfig(org, token, endpoint, timeout),
 			testReadDsnErr(project, dsnname, ""),
-			testWriteProjectExisting(org, project, team),
+			testWriteProjectExisting(org, project, team, ""),
 			testReadDsn(org, project, dsnname),
+
+			testWriteProjectExisting(org, "default-dsn-"+project, team, "default-dsn-name"),
+			testReadDefaultDsn(org, "default-dsn-"+project, "default-dsn-name"),
 		},
 	})
 }
@@ -38,6 +41,28 @@ func testReadDsnErr(project, dsnname, msg string) logicaltest.TestStep {
 
 			if !strings.Contains(resp.Error().Error(), msg) {
 				return fmt.Errorf("unexpected error %q does not match %q", resp.Error(), msg)
+			}
+
+			return nil
+		},
+	}
+}
+
+func testReadDefaultDsn(org, project, dsnname string) logicaltest.TestStep {
+	localSentry.handleStatic(fmt.Sprintf("/projects/%s/%s/keys/", org, project), http.StatusOK, fmt.Sprintf(getClientKeyResponseBody, dsnname))
+
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "dsn/" + project,
+		ErrorOk:   false,
+		Check: func(resp *logical.Response) error {
+			expect := map[string]interface{}{
+				"name": dsnname,
+				"dsn":  "https://test@sentry.io/2",
+			}
+
+			if !cmp.Equal(expect, resp.Data) {
+				return fmt.Errorf("unexpected response. %s", cmp.Diff(expect, resp.Data))
 			}
 
 			return nil

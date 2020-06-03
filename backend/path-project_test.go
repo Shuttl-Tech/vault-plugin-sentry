@@ -17,11 +17,13 @@ func TestHandleProject(t *testing.T) {
 			testReadProjectErr("unregistered", "project unregistered is not configured in Vault"),
 			testWriteProjectErr("test-project", "test-team", "plugin is not configured"),
 			testWriteConfig("project-org", "token", localSentry.url, 10),
-			testWriteProjectExisting("project-org", "existing-project", "test-team"),
-			testReadProject("existing-project", "display-name-existing-project", "project-org", "test-team"),
-			testWriteProjectFresh("project-org", "fresh-project", "test-team"),
-			testReadProject("fresh-project", "display-name-fresh-project", "project-org", "test-team"),
+			testWriteProjectExisting("project-org", "existing-project", "test-team", ""),
+			testReadProject("existing-project", "display-name-existing-project", "project-org", "test-team", ""),
+			testWriteProjectFresh("project-org", "fresh-project", "test-team", ""),
+			testReadProject("fresh-project", "display-name-fresh-project", "project-org", "test-team", ""),
 			testListProjects("existing-project", "fresh-project"),
+			testWriteProjectExisting("project-org", "project-with-default-dsn", "test-team", "default-dsn-for-tests"),
+			testReadProject("project-with-default-dsn", "display-name-project-with-default-dsn", "project-org", "test-team", "default-dsn-for-tests"),
 		},
 	})
 }
@@ -39,7 +41,7 @@ func testListProjects(names ...string) logicaltest.TestStep {
 	}
 }
 
-func testWriteProjectExisting(org, name, team string) logicaltest.TestStep {
+func testWriteProjectExisting(org, name, team, dsnLabel string) logicaltest.TestStep {
 	localSentry.handleStatic("/projects/"+org+"/"+name+"/", http.StatusOK, fmt.Sprintf(getProjectResponseBody, "display-name-"+name))
 
 	return logicaltest.TestStep{
@@ -47,14 +49,16 @@ func testWriteProjectExisting(org, name, team string) logicaltest.TestStep {
 		Path:      "project/" + name,
 		ErrorOk:   false,
 		Data: map[string]interface{}{
-			"team": team,
+			"team":              team,
+			"default_dsn_label": dsnLabel,
 		},
 		Check: func(resp *logical.Response) error {
 			expect := map[string]interface{}{
-				"name":         name,
-				"display_name": "display-name-" + name,
-				"team":         team,
-				"org":          org,
+				"name":              name,
+				"display_name":      "display-name-" + name,
+				"team":              team,
+				"org":               org,
+				"default_dsn_label": dsnLabel,
 			}
 
 			if !cmp.Equal(expect, resp.Data) {
@@ -66,7 +70,7 @@ func testWriteProjectExisting(org, name, team string) logicaltest.TestStep {
 	}
 }
 
-func testWriteProjectFresh(org, name, team string) logicaltest.TestStep {
+func testWriteProjectFresh(org, name, team, dsnName string) logicaltest.TestStep {
 	localSentry.handleStatic("/projects/"+org+"/"+name+"/", http.StatusOK, fmt.Sprintf(getProjectResponseBody, "display-name-"+name))
 	localSentry.handleStatic(fmt.Sprintf("/teams/%s/%s/projects/", org, team), http.StatusOK, fmt.Sprintf(getProjectResponseBody, "display-name-"+name))
 
@@ -75,14 +79,16 @@ func testWriteProjectFresh(org, name, team string) logicaltest.TestStep {
 		Path:      "project/" + name,
 		ErrorOk:   false,
 		Data: map[string]interface{}{
-			"team": team,
+			"team":              team,
+			"default_dsn_label": dsnName,
 		},
 		Check: func(resp *logical.Response) error {
 			expect := map[string]interface{}{
-				"name":         name,
-				"display_name": "display-name-" + name,
-				"team":         team,
-				"org":          org,
+				"name":              name,
+				"display_name":      "display-name-" + name,
+				"team":              team,
+				"org":               org,
+				"default_dsn_label": dsnName,
 			}
 
 			if !cmp.Equal(expect, resp.Data) {
@@ -116,16 +122,17 @@ func testWriteProjectErr(name string, team string, msg string) logicaltest.TestS
 	}
 }
 
-func testReadProject(name, displayName, org, team string) logicaltest.TestStep {
+func testReadProject(name, displayName, org, team, dsnLabel string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "project/" + name,
 		Check: func(resp *logical.Response) error {
 			expect := map[string]interface{}{
-				"name":         name,
-				"display_name": displayName,
-				"team":         team,
-				"org":          org,
+				"name":              name,
+				"display_name":      displayName,
+				"team":              team,
+				"org":               org,
+				"default_dsn_label": dsnLabel,
 			}
 
 			if !cmp.Equal(expect, resp.Data) {

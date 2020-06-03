@@ -44,6 +44,23 @@ func handleDsnRead(ctx context.Context, req *logical.Request, data *framework.Fi
 	projectName := data.Get("project").(string)
 	dsnName := data.Get("name").(string)
 
+	project, err := loadProject(ctx, req.Storage, projectName)
+	if err != nil {
+		return nil, err
+	}
+
+	if project == nil {
+		return logical.ErrorResponse("project %s is not configured", projectName), nil
+	}
+
+	if dsnName == "" {
+		dsnName = project.DefaultDsnLabel
+	}
+
+	if dsnName == "" {
+		return logical.ErrorResponse("default DSN label is not set for project %s", projectName), nil
+	}
+
 	dsn, err := loadDsn(ctx, req.Storage, projectName, dsnName)
 	if err != nil {
 		return nil, err
@@ -62,15 +79,6 @@ func handleDsnRead(ctx context.Context, req *logical.Request, data *framework.Fi
 
 	if config == nil {
 		return logical.ErrorResponse("plugin is not configured"), nil
-	}
-
-	project, err := loadProject(ctx, req.Storage, projectName)
-	if err != nil {
-		return nil, err
-	}
-
-	if project == nil {
-		return logical.ErrorResponse("project %s is not configured", projectName), nil
 	}
 
 	client, err := config.Client()
