@@ -20,7 +20,6 @@ func TestHandleInfo(t *testing.T) {
 
 func testReadInfo() logicaltest.TestStep {
 	version.GitCommit = "test-commit"
-	version.Name = "v0.0.0-test"
 
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
@@ -29,7 +28,7 @@ func testReadInfo() logicaltest.TestStep {
 			expect := map[string]interface{}{
 				"description": "Manage Sentry projects and their DSN",
 				"commit_sha":  version.GitCommit,
-				"version":     " v0.1.0 ()",
+				"version":     fmt.Sprintf(" v%s ()", version.Version),
 			}
 
 			if !cmp.Equal(expect, resp.Data) {
