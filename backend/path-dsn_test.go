@@ -49,7 +49,7 @@ func testReadDsnErr(project, dsnname, msg string) logicaltest.TestStep {
 }
 
 func testReadDefaultDsn(org, project, dsnname string) logicaltest.TestStep {
-	localSentry.handleStatic(fmt.Sprintf("/projects/%s/%s/keys/", org, project), http.StatusOK, fmt.Sprintf(getClientKeyResponseBody, dsnname))
+	localSentry.handleStatic(fmt.Sprintf("/projects/%s/display-name-%s/keys/", org, project), http.StatusOK, fmt.Sprintf(getClientKeyResponseBody, dsnname))
 
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
@@ -71,7 +71,7 @@ func testReadDefaultDsn(org, project, dsnname string) logicaltest.TestStep {
 }
 
 func testReadDsn(org, project, dsnname string) logicaltest.TestStep {
-	localSentry.handleStatic(fmt.Sprintf("/projects/%s/%s/keys/", org, project), http.StatusOK, fmt.Sprintf(getClientKeyResponseBody, dsnname))
+	localSentry.handleStatic(fmt.Sprintf("/projects/%s/display-name-%s/keys/", org, project), http.StatusOK, fmt.Sprintf(getClientKeyResponseBody, dsnname))
 
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,

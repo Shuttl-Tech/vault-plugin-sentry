@@ -20,8 +20,9 @@ func TestHandleProject(t *testing.T) {
 			testWriteProjectExisting("project-org", "existing-project", "test-team", ""),
 			testReadProject("existing-project", "display-name-existing-project", "project-org", "test-team", ""),
 			testWriteProjectFresh("project-org", "fresh-project", "test-team", ""),
+			testWriteProjectWithSentryName("project-org", "frs", "free-ride-service", "my-team", ""),
 			testReadProject("fresh-project", "display-name-fresh-project", "project-org", "test-team", ""),
-			testListProjects("existing-project", "fresh-project"),
+			testListProjects("existing-project", "fresh-project", "frs"),
 			testWriteProjectExisting("project-org", "project-with-default-dsn", "test-team", "default-dsn-for-tests"),
 			testReadProject("project-with-default-dsn", "display-name-project-with-default-dsn", "project-org", "test-team", "default-dsn-for-tests"),
 		},
@@ -86,6 +87,36 @@ func testWriteProjectFresh(org, name, team, dsnName string) logicaltest.TestStep
 			expect := map[string]interface{}{
 				"name":              name,
 				"display_name":      "display-name-" + name,
+				"team":              team,
+				"org":               org,
+				"default_dsn_label": dsnName,
+			}
+
+			if !cmp.Equal(expect, resp.Data) {
+				return fmt.Errorf("unexpected data in response. %s", cmp.Diff(expect, resp.Data))
+			}
+
+			return nil
+		},
+	}
+}
+
+func testWriteProjectWithSentryName(org, name, sentryName, team, dsnName string) logicaltest.TestStep {
+	localSentry.handleStatic("/projects/"+org+"/"+name+"/", http.StatusOK, fmt.Sprintf(getProjectResponseBody, sentryName))
+	localSentry.handleStatic(fmt.Sprintf("/teams/%s/%s/projects/", org, team), http.StatusOK, fmt.Sprintf(getProjectResponseBody, sentryName))
+
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "project/" + name,
+		ErrorOk:   false,
+		Data: map[string]interface{}{
+			"team":              team,
+			"default_dsn_label": dsnName,
+		},
+		Check: func(resp *logical.Response) error {
+			expect := map[string]interface{}{
+				"name":              name,
+				"display_name":      sentryName,
 				"team":              team,
 				"org":               org,
 				"default_dsn_label": dsnName,

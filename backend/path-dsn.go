@@ -41,27 +41,27 @@ func loadDsn(ctx context.Context, storage logical.Storage, project, label string
 }
 
 func handleDsnRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	projectName := data.Get("project").(string)
+	vaultProjectName := data.Get("project").(string)
 	dsnName := data.Get("name").(string)
 
-	project, err := loadProject(ctx, req.Storage, projectName)
+	vaultProject, err := loadProject(ctx, req.Storage, vaultProjectName)
 	if err != nil {
 		return nil, err
 	}
 
-	if project == nil {
-		return logical.ErrorResponse("project %s is not configured", projectName), nil
+	if vaultProject == nil {
+		return logical.ErrorResponse("vaultProject %s is not configured", vaultProjectName), nil
 	}
 
 	if dsnName == "" {
-		dsnName = project.DefaultDsnLabel
+		dsnName = vaultProject.DefaultDsnLabel
 	}
 
 	if dsnName == "" {
-		return logical.ErrorResponse("default DSN label is not set for project %s", projectName), nil
+		return logical.ErrorResponse("default DSN label is not set for vaultProject %s", vaultProjectName), nil
 	}
 
-	dsn, err := loadDsn(ctx, req.Storage, projectName, dsnName)
+	dsn, err := loadDsn(ctx, req.Storage, vaultProjectName, dsnName)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func handleDsnRead(ctx context.Context, req *logical.Request, data *framework.Fi
 	key, err := fetchKeyOrMakeNew(
 		client,
 		sentry.Organization{Slug: &config.Name},
-		sentry.Project{Slug: &project.Name},
+		sentry.Project{Slug: &vaultProject.DisplayName},
 		dsnName,
 	)
 
@@ -102,7 +102,7 @@ func handleDsnRead(ctx context.Context, req *logical.Request, data *framework.Fi
 		DSN:  key.DSN.Public,
 	}
 
-	entry, err := logical.StorageEntryJSON(KeyDsnPrefix+projectName+"/"+dsnName, item)
+	entry, err := logical.StorageEntryJSON(KeyDsnPrefix+vaultProjectName+"/"+dsnName, item)
 	if err != nil {
 		return nil, err
 	}
