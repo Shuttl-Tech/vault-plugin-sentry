@@ -111,6 +111,9 @@ func New(c *logical.BackendConfig) *backend {
 					logical.UpdateOperation: &framework.PathOperation{
 						Callback: handleProjectUpdate,
 					},
+					logical.DeleteOperation: &framework.PathOperation{
+						Callback: handleProjectDelete,
+					},
 				},
 			},
 			{

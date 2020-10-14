@@ -156,3 +156,41 @@ func handleProjectUpdate(ctx context.Context, req *logical.Request, data *framew
 		Data: item.Data(),
 	}, nil
 }
+
+func handleProjectDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	projectName := data.Get("project").(string)
+	project, err := loadProject(ctx, req.Storage, projectName)
+	if err != nil {
+		return nil, err
+	}
+
+	if project == nil {
+		return logical.ErrorResponse("project %s is not configured in vault", projectName), nil
+	}
+
+	// Cleanup project dsn entries from vault too
+	keys, err := req.Storage.List(ctx, KeyDsnPrefix+projectName+"/")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, key := range keys {
+		err = req.Storage.Delete(ctx, KeyDsnPrefix+projectName+"/"+key)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Remove project name from vault
+	err = req.Storage.Delete(ctx, KeyProjectConfigPrefix+projectName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPContentType: "application/json",
+			logical.HTTPStatusCode:  http.StatusOK,
+		},
+	}, nil
+}

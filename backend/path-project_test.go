@@ -25,6 +25,7 @@ func TestHandleProject(t *testing.T) {
 			testListProjects("existing-project", "fresh-project", "frs"),
 			testWriteProjectExisting("project-org", "project-with-default-dsn", "test-team", "default-dsn-for-tests"),
 			testReadProject("project-with-default-dsn", "display-name-project-with-default-dsn", "project-org", "test-team", "default-dsn-for-tests"),
+			testDeleteProject("project-with-default-dsn"),
 		},
 	})
 }
@@ -187,6 +188,25 @@ func testReadProjectErr(name, msg string) logicaltest.TestStep {
 
 			if !strings.Contains(resp.Error().Error(), msg) {
 				return fmt.Errorf("unexpected error message %q does not match %q", resp.Error(), msg)
+			}
+
+			return nil
+		},
+	}
+}
+
+func testDeleteProject(name string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.DeleteOperation,
+		Path:      "project/" + name,
+		Check: func(resp *logical.Response) error {
+			expect := map[string]interface{}{
+				logical.HTTPContentType: "application/json",
+				logical.HTTPStatusCode:  http.StatusOK,
+			}
+
+			if !cmp.Equal(expect, resp.Data) {
+				return fmt.Errorf("unexpected data in read response. %s", cmp.Diff(expect, resp.Data))
 			}
 
 			return nil

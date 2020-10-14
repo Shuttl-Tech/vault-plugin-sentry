@@ -50,7 +50,7 @@ func handleDsnRead(ctx context.Context, req *logical.Request, data *framework.Fi
 	}
 
 	if vaultProject == nil {
-		return logical.ErrorResponse("vaultProject %s is not configured", vaultProjectName), nil
+		return logical.ErrorResponse("project %s is not configured", vaultProjectName), nil
 	}
 
 	if dsnName == "" {
@@ -58,7 +58,7 @@ func handleDsnRead(ctx context.Context, req *logical.Request, data *framework.Fi
 	}
 
 	if dsnName == "" {
-		return logical.ErrorResponse("default DSN label is not set for vaultProject %s", vaultProjectName), nil
+		return logical.ErrorResponse("default DSN label is not set for project %s", vaultProjectName), nil
 	}
 
 	dsn, err := loadDsn(ctx, req.Storage, vaultProjectName, dsnName)
