@@ -73,9 +73,24 @@ func handleProjectsList(ctx context.Context, req *logical.Request, data *framewo
 }
 
 func handleProjectUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	projectName := data.Get("project").(string)
+	vaultProjectName := data.Get("project").(string)
+	sentryProjectName := data.Get("sentry_project").(string)
 	teamName := data.Get("team").(string)
 	defaultDsnLabel := data.Get("default_dsn_label").(string)
+
+	if sentryProjectName == "" {
+		sentryProjectName = vaultProjectName
+
+		// Lookup Vault storage for sentry project name, might be name set in earlier request(s)
+		vaultProject, err := loadProject(ctx, req.Storage, vaultProjectName)
+		if err != nil {
+			return nil, err
+		}
+
+		if vaultProject != nil {
+			sentryProjectName = vaultProject.DisplayName
+		}
+	}
 
 	config, err := loadConfig(ctx, req.Storage)
 	if err != nil {
@@ -93,9 +108,9 @@ func handleProjectUpdate(ctx context.Context, req *logical.Request, data *framew
 
 	// Attempt to read project from sentry or create a new one
 	// if the project does not exist.
-	p, err := client.GetProject(sentry.Organization{
+	sentryProject, err := client.GetProject(sentry.Organization{
 		Slug: &config.Name,
-	}, projectName)
+	}, sentryProjectName)
 
 	if err != nil {
 		apiErr, ok := err.(sentry.APIError)
@@ -107,10 +122,10 @@ func handleProjectUpdate(ctx context.Context, req *logical.Request, data *framew
 			return logical.ErrorResponse("failed to read project information from sentry. %s", apiErr), nil
 		}
 
-		p, err = client.CreateProject(
+		sentryProject, err = client.CreateProject(
 			sentry.Organization{Slug: &config.Name},
 			sentry.Team{Slug: &teamName},
-			projectName,
+			sentryProjectName,
 			nil,
 		)
 
@@ -120,14 +135,14 @@ func handleProjectUpdate(ctx context.Context, req *logical.Request, data *framew
 	}
 
 	item := &SentryProject{
-		Name:            projectName,
-		DisplayName:     p.Name,
+		Name:            vaultProjectName,
+		DisplayName:     sentryProject.Name,
 		Org:             config.Name,
 		Team:            teamName,
 		DefaultDsnLabel: defaultDsnLabel,
 	}
 
-	entry, err := logical.StorageEntryJSON(KeyProjectConfigPrefix+projectName, item)
+	entry, err := logical.StorageEntryJSON(KeyProjectConfigPrefix+vaultProjectName, item)
 	if err != nil {
 		return nil, err
 	}
@@ -139,5 +154,43 @@ func handleProjectUpdate(ctx context.Context, req *logical.Request, data *framew
 
 	return &logical.Response{
 		Data: item.Data(),
+	}, nil
+}
+
+func handleProjectDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	projectName := data.Get("project").(string)
+	project, err := loadProject(ctx, req.Storage, projectName)
+	if err != nil {
+		return nil, err
+	}
+
+	if project == nil {
+		return logical.ErrorResponse("project %s is not configured in vault", projectName), nil
+	}
+
+	// Cleanup project dsn entries from vault too
+	keys, err := req.Storage.List(ctx, KeyDsnPrefix+projectName+"/")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, key := range keys {
+		err = req.Storage.Delete(ctx, KeyDsnPrefix+projectName+"/"+key)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Remove project name from vault
+	err = req.Storage.Delete(ctx, KeyProjectConfigPrefix+projectName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPContentType: "application/json",
+			logical.HTTPStatusCode:  http.StatusOK,
+		},
 	}, nil
 }

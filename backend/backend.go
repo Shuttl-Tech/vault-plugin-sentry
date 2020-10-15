@@ -86,7 +86,7 @@ func New(c *logical.BackendConfig) *backend {
 					"project": {
 						Type:        framework.TypeString,
 						Required:    true,
-						Description: "Name of the project in sentry",
+						Description: "Name of the project in Vault",
 					},
 					"team": {
 						Type:        framework.TypeString,
@@ -98,6 +98,11 @@ func New(c *logical.BackendConfig) *backend {
 						Required:    false,
 						Description: "DSN label to use by default when not specified",
 					},
+					"sentry_project": {
+						Type:        framework.TypeString,
+						Required:    false,
+						Description: "Name of the project in sentry",
+					},
 				},
 				Operations: map[logical.Operation]framework.OperationHandler{
 					logical.ReadOperation: &framework.PathOperation{
@@ -105,6 +110,9 @@ func New(c *logical.BackendConfig) *backend {
 					},
 					logical.UpdateOperation: &framework.PathOperation{
 						Callback: handleProjectUpdate,
+					},
+					logical.DeleteOperation: &framework.PathOperation{
+						Callback: handleProjectDelete,
 					},
 				},
 			},
